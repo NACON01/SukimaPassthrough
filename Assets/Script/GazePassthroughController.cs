@@ -111,17 +111,20 @@ public class GazePassthroughController : MonoBehaviour
         float target = _windowOpen ? 1.0f : 0.0f;
         _currentOpacity = Mathf.MoveTowards(_currentOpacity, target, fadeSpeed * Time.deltaTime);
 
+        // MeshRenderer と OVRPassthroughLayer を opacity に連動して enable/disable
+        bool shouldShow = _currentOpacity > 0.001f;
+
+        if (_meshRenderer.enabled != shouldShow)
+            _meshRenderer.enabled = shouldShow;
+
+        if (passthroughLayer != null && passthroughLayer.hidden == shouldShow)
+            passthroughLayer.hidden = !shouldShow;
+
+        if (!shouldShow) return;
+
         // Phase B - P2: MaterialPropertyBlock で描画
         _propBlock.SetFloat(InvertedAlpha, _currentOpacity);
         _meshRenderer.SetPropertyBlock(_propBlock);
-
-        // Phase B - P3: 完全に閉じている間は hidden でコンポジット処理をスキップ（GPU 節約）
-        if (passthroughLayer != null)
-        {
-            bool shouldShow = _currentOpacity > 0.001f;
-            if (passthroughLayer.hidden == shouldShow)
-                passthroughLayer.hidden = !shouldShow;
-        }
     }
 
     // --- UIスライダーから呼び出すための関数群 ---
