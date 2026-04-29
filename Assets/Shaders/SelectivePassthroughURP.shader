@@ -26,17 +26,23 @@ Shader "Custom/SelectivePassthroughURP"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            // Required for Single Pass Instanced / Multiview stereo rendering on Quest
+            #pragma multi_compile_instancing
+            #pragma multi_compile _ STEREO_INSTANCING_ON STEREO_MULTIVIEW_ON
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             struct Attributes
             {
                 float4 positionOS : POSITION;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -46,12 +52,16 @@ Shader "Custom/SelectivePassthroughURP"
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
+                UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(OUT);
                 OUT.positionCS = TransformObjectToHClip(IN.positionOS.xyz);
                 return OUT;
             }
 
             half4 frag(Varyings IN) : SV_Target
             {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
                 // _InvertedAlpha=1: window open -> output alpha=0 -> punch hole for passthrough
                 // _InvertedAlpha=0: window closed -> output alpha=1 -> preserve VR content
                 return half4(0.0h, 0.0h, 0.0h, 1.0h - (half)_InvertedAlpha);
